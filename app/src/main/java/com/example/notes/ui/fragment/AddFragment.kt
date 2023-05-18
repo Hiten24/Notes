@@ -5,36 +5,55 @@ import android.annotation.SuppressLint
 import android.app.*
 import android.os.Build
 import android.os.Bundle
+import android.text.util.Linkify
+import android.util.Log
 import android.view.*
 import android.widget.*
 import androidx.annotation.RequiresApi
+import androidx.appcompat.widget.Toolbar
 import androidx.core.view.MenuProvider
+import androidx.core.view.isVisible
+import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 import com.example.notes.R
 import com.example.notes.databinding.FragmentAddBinding
 import com.example.notes.model.Notes
+import com.example.notes.services.scheduleEvent
+import com.example.notes.utils.CustomSnackbar
+import com.example.notes.utils.Utils.getInMilliSecond
 import com.example.notes.viewmodels.MyViewModel
+import com.google.android.material.chip.Chip
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import dagger.hilt.android.AndroidEntryPoint
+import me.saket.bettermovementmethod.BetterLinkMovementMethod
+import java.text.SimpleDateFormat
 import java.util.*
 
 @AndroidEntryPoint
-class AddFragment : DialogFragment(),MenuProvider {
-
-    private val binding: FragmentAddBinding by lazy { FragmentAddBinding.inflate(layoutInflater) }
+class AddFragment : DialogFragment(), MenuProvider,BetterLinkMovementMethod.OnLinkClickListener,
+    CustomTimePickerDialog.TimeCallBack, CustomDatePickerDialog.DateCallBack,
+    Toolbar.OnMenuItemClickListener {
+    private val TAG = "AddFragment"
+    private lateinit var betterLinkMovementMethod: BetterLinkMovementMethod
+    private lateinit var binding: FragmentAddBinding
     private val myViewModel: MyViewModel by activityViewModels()
     private var isActive = -1
     private lateinit var addExtendFloatButton: ExtendedFloatingActionButton
     private lateinit var dateFloatButton: FloatingActionButton
     private lateinit var timeFloatButton: FloatingActionButton
     private lateinit var cancelAlarmButton: FloatingActionButton
+    private var date:Long?=null
+    set(value) {
+        binding.scheduledTime.isVisible = value!=null
+        field = value
+    }
     private var isAllFabAvailable = false
-    private val customDatePickerDialogFragment: CustomDatePickerDialog by lazy{CustomDatePickerDialog()}
-    private val customTimePickerDialogFragment: CustomTimePickerDialog by lazy{CustomTimePickerDialog()}
-
+    private val customDatePickerDialogFragment: CustomDatePickerDialog by lazy{CustomDatePickerDialog(this)}
+    private val customTimePickerDialogFragment: CustomTimePickerDialog by lazy{CustomTimePickerDialog(this)}
+    private lateinit var chip :Chip
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
     }
@@ -43,6 +62,7 @@ class AddFragment : DialogFragment(),MenuProvider {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        binding = FragmentAddBinding.inflate(layoutInflater,container,false)
         return binding.root
 
     }
@@ -50,21 +70,29 @@ class AddFragment : DialogFragment(),MenuProvider {
     @RequiresApi(Build.VERSION_CODES.O)
     @SuppressLint("ResourceAsColor")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        addExtendFloatButton = binding.add
-        dateFloatButton = binding.scheduleDate
-        timeFloatButton = binding.scheduleTime
-        cancelAlarmButton = binding.cancelAlarm
-
+        betterLinkMovementMethod = BetterLinkMovementMethod.newInstance()
 //        activity?.addMenuProvider(this)
-
-        binding.topMenu.setOnMenuItemClickListener {
-            when(it.itemId) {
-                R.id.saveButton -> {
-                    onClick()
-                    dismiss()
-                    true
-                }
-                else-> false
+        chip = Chip(requireContext())
+        with(binding){
+            topMenu.setOnMenuItemClickListener(this@AddFragment)
+            topMenu.menu.findItem(R.id.saveButton).isEnabled = !title.text?.trim().isNullOrBlank() && !description.text?.trim().isNullOrBlank()
+            description.doOnTextChanged { text, _,_,_ ->
+                topMenu.menu.findItem(R.id.saveButton).setEnabled(!text?.trim().isNullOrBlank() && !binding.title.text?.trim().isNullOrBlank())
+            }
+            title.doOnTextChanged { text, _,_,_ ->
+                topMenu.menu.findItem(R.id.saveButton).setEnabled( !text?.trim().isNullOrBlank() && !binding.description.text?.trim().isNullOrBlank())
+            }
+            topMenu.setNavigationOnClickListener {
+                findNavController().popBackStack()
+            }
+            description.apply {
+                linksClickable = true
+                isClickable = true
+                movementMethod = betterLinkMovementMethod
+                Linkify.addLinks(this, Linkify.WEB_URLS or Linkify.EMAIL_ADDRESSES)
+            }
+            scheduledTime.setOnCloseIconClickListener {
+                date = null
             }
         }
     }
@@ -73,52 +101,41 @@ class AddFragment : DialogFragment(),MenuProvider {
     private fun onClick() {
         val title = binding.title.text
         val description = binding.description.text
-        if (!title.isNullOrBlank()) {
+        if (!title.isNullOrBlank() && !description.isNullOrBlank()) {
 //            binding.titleInputLayout.isErrorEnabled = false
-
-            if (description.isNullOrEmpty()) {
-                Toast.makeText(requireContext(), "Enter Description", Toast.LENGTH_SHORT).show()
-            } else {
+                val intentId = System.currentTimeMillis().toString().substring(5,11).toInt()
                 myViewModel.addData(
                     Notes(
                         0,
                         title = title.toString(),
                         description = description.toString(),
                         hasPriority = isActive,
-                        date = Date(System.currentTimeMillis()),
-                        eventDate = Date(getInMilliSecond())
+                        createdDate = Date(System.currentTimeMillis()),
+                        eventDate = date,
+                        intentId = intentId
                     )
                 )
-//                alarm(true,requireActivity(), title.toString(),description.toString(),getInMilliSecond())
-                Toast.makeText(context,"Data added",Toast.LENGTH_SHORT).show()
+                date?.let {
+                    scheduleEvent(
+                        requireContext(),
+                        title.toString(),
+                        description.toString(),
+                        it,
+                        intentId
+                    )
+                }
                 findNavController().popBackStack()
-            }
-        } else {
-            Toast.makeText(requireContext(), "Enter Title", Toast.LENGTH_SHORT).show()
-        }
+        } else CustomSnackbar.snackBar(binding.root,"Please have some message")
     }
 
-    private fun scheduleDate(view: View) {
+    private fun scheduleDate() {
         customDatePickerDialogFragment.show(requireActivity().supportFragmentManager, "Calendar")
     }
 
-    private fun scheduleTime(view: View) {
+    private fun scheduleTime() {
         customTimePickerDialogFragment.show(requireActivity().supportFragmentManager, "Time")
     }
 
-
-    @SuppressLint("SimpleDateFormat")
-    private fun getInMilliSecond(): Long {
-        val calendar = customDatePickerDialogFragment.getDate()
-        calendar.set(Calendar.HOUR, customTimePickerDialogFragment.getHour())
-        calendar.set(Calendar.MINUTE, customTimePickerDialogFragment.getMinute())
-        calendar.set(Calendar.SECOND, 0)
-
-        if(calendar.before(Calendar.getInstance()) ){
-            calendar.add(Calendar.DATE,1)
-        }
-        return calendar.timeInMillis
-    }
 
     override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
         Toast.makeText(requireContext(), "menu", Toast.LENGTH_SHORT).show()
@@ -128,12 +145,50 @@ class AddFragment : DialogFragment(),MenuProvider {
     override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
         return when (menuItem.itemId) {
             R.id.saveButton -> {
-                Toast.makeText(requireContext(), "cleck", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "click", Toast.LENGTH_SHORT).show()
                 onClick()
                 true
             }
             else -> false
         }
     }
+
+    override fun dateClick(calendar: Calendar){
+        date = getInMilliSecond(calendar,
+            customTimePickerDialogFragment.getHour(),
+            customTimePickerDialogFragment.getMinute())
+        val formattedDate = SimpleDateFormat("EEE dd MMM,hh:mm a", Locale.ENGLISH).format(Date(date?:0L))
+        binding.scheduledTime.text = formattedDate
+        Log.d(TAG, "dateClick: $date")
+    }
+
+    override fun timeClick(hours: Int?, minute: Int?) {
+        date = getInMilliSecond(customDatePickerDialogFragment.getDate(),
+            hours?: customTimePickerDialogFragment.getHour(),
+            minute?:customTimePickerDialogFragment.getMinute())
+        val formattedDate = SimpleDateFormat("EEE dd MMM,hh:mm a", Locale.ENGLISH).format(Date(date?:0L))
+        binding.scheduledTime.text = formattedDate
+        Log.d(TAG, "timeClick: $date")
+    }
+
+    override fun onMenuItemClick(item: MenuItem?): Boolean {
+        return when (item?.itemId) {
+                R.id.saveButton -> {
+                    onClick()
+                    true
+                }
+                R.id.dateButton -> {
+                    scheduleDate()
+                    true
+                }
+                R.id.timeButton -> {
+                    scheduleTime()
+                    true
+                }
+                else -> false
+        }
+    }
+
+    override fun onClick(textView: TextView?, url: String?): Boolean = false
 
 }

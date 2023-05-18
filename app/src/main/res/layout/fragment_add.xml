@@ -4,8 +4,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/listBgColor"
     tools:context=".ui.fragment.AddFragment">
-
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
@@ -13,18 +13,34 @@
             android:id="@+id/topMenu"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:title="Add"
             app:titleCentered="true"
             app:menu="@menu/top_menu"
-            style="@style/Custom.ToolBar"
-            />
+            android:elevation="0dp"
+            >
+            <com.google.android.material.chip.Chip
+                android:id="@+id/scheduledTime"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                tools:text="14 Mar 23,19:56 am"
+                tools:visibility="visible"
+                android:visibility="gone"
+                app:chipIcon="@drawable/baseline_alarm_24"
+                app:closeIcon="@drawable/baseline_close_24"
+                app:closeIconEnabled="true"
+                style="@style/Widget.Chip.Action"
+                />
+        </com.google.android.material.appbar.MaterialToolbar>
     </com.google.android.material.appbar.AppBarLayout>
-    <LinearLayout
+    <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        app:layout_behavior="com.google.android.material.appbar.AppBarLayout$ScrollingViewBehavior">
+    <LinearLayout
+        android:id="@+id/rootLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:orientation="vertical"
         android:layout_margin="10dp"
-        app:layout_behavior="com.google.android.material.appbar.AppBarLayout$ScrollingViewBehavior"
         tools:ignore="UselessParent">
 
             <com.google.android.material.textfield.TextInputEditText
@@ -32,7 +48,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="@color/transparentBorder"
-                android:textSize="22sp"
+                android:textSize="28sp"
                 android:hint="@string/title"
                 android:padding="5dp"
                 android:inputType="text"
@@ -44,95 +60,15 @@
                 android:layout_height="match_parent"
                 android:gravity="top"
                 android:padding="5dp"
+                android:minHeight="600dp"
                 android:hint="@string/description"
+                android:textColorLink="#5567C6"
                 android:background="@color/transparentBorder"
                 android:inputType="textMultiLine"
+
                 android:imeOptions="actionDone"
                 />
 
-
-        <RadioGroup
-            android:id="@+id/priority_grp"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:visibility="gone"
-            android:checkedButton="@id/low_priority">
-
-            <RadioButton
-                android:id="@+id/low_priority"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/low_priority" />
-
-            <RadioButton
-                android:id="@+id/medium_priority"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/medium_priority" />
-
-            <RadioButton
-                android:id="@+id/high_priority"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/high_priority" />
-
-        </RadioGroup>
-
     </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|right"
-        android:orientation="vertical"
-        android:visibility="gone"
-        tools:ignore="RtlHardcoded">
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/scheduleDate"
-        style="@style/Widget.App.ExtendedFloatingActionButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="end"
-        android:layout_margin="5dp"
-        android:src="@drawable/ic_baseline_calendar_today_24"
-        android:visibility="gone"
-        app:fabSize="normal"
-        tools:ignore="RtlHardcoded,UsingOnClickInXml" />
-
-
-        <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/scheduleTime"
-            style="@style/Widget.App.ExtendedFloatingActionButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="end"
-            android:layout_margin="5dp"
-            android:src="@drawable/ic_outline_add_alarm_24"
-            android:visibility="gone"
-            app:fabSize="normal"
-            tools:ignore="RtlHardcoded,UsingOnClickInXml" />
-
-        <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/cancelAlarm"
-            style="@style/Widget.App.ExtendedFloatingActionButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="end"
-            android:layout_margin="5dp"
-            android:src="@drawable/ic_baseline_delete_24"
-            android:visibility="gone"
-            app:fabSize="normal"
-            tools:ignore="RtlHardcoded,UsingOnClickInXml" />
-
-        <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
-            android:id="@+id/add"
-            style="@style/Widget.App.ExtendedFloatingActionButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="end"
-            android:text="Add"
-            app:icon="@drawable/ic_baseline_add_24"
-            tools:ignore="RtlHardcoded" />
-    </LinearLayout>
+    </ScrollView>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -6,8 +6,8 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.recyclerview.selection.ItemDetailsLookup
+import androidx.recyclerview.selection.ItemKeyProvider
 import androidx.recyclerview.selection.SelectionTracker
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -34,30 +34,18 @@ class ItemAdapter(private val clickListener: OnClickListener) :
     private val EMPTY_VIEW = 90090
 
     object DiffCallback : DiffUtil.ItemCallback<BaseNotes>() {
-        override fun areItemsTheSame(oldItem: BaseNotes, newItem: BaseNotes): Boolean =
-            try{
-                when (oldItem) {
-                    is Notes -> {
-                        if (newItem is Notes) oldItem.id == newItem.id else false
-                    }
-                    else -> oldItem == newItem
-                }
-            }catch (E:Exception){
-                Log.d("TAG", "areItemsTheSame: ${E.message}")
-                false
-            }
+        override fun areItemsTheSame(oldItem: BaseNotes, newItem: BaseNotes): Boolean {
+            return if (oldItem is Notes && newItem is Notes) oldItem.id == newItem.id
+            // since other layout is only 1 item i.e empty icon or layout so there is nothing to refresh
+            else false
+        }
 
 
-        override fun areContentsTheSame(oldItem: BaseNotes, newItem: BaseNotes): Boolean =
-            try{
-                when (oldItem) {
-                    is Notes -> oldItem != newItem
-                    else -> false
-                }
-            }catch (E:Exception){
-                Log.d("TAG", "areContentsTheSame: ${E.message}")
-                false
-            }
+        override fun areContentsTheSame(oldItem: BaseNotes, newItem: BaseNotes): Boolean {
+            return if (oldItem is Notes && newItem is Notes) oldItem.description != newItem.description
+            // since other layout is only 1 item i.e empty icon or layout so there is nothing to refresh
+            else false
+        }
     }
 
 
@@ -80,7 +68,6 @@ class ItemAdapter(private val clickListener: OnClickListener) :
             (holder as ItemHolder)
             if(item is Notes) {
                 try{
-                        if(position==0)Toast.makeText(holder.itemView.context, "$selectionTracker", Toast.LENGTH_SHORT).show()
                     selectionTracker?.let{
                         holder.bind(item, it.isSelected(item.id.toLong()))
                     }
@@ -98,13 +85,13 @@ class ItemAdapter(private val clickListener: OnClickListener) :
     inner class ItemHolder(private val binding: ListItemBinding) : ViewHolder(binding.root) {
         @SuppressLint("SimpleDateFormat")
 
-        private val simpleDateFormat = SimpleDateFormat("dd MMM, hh:mm a")
+        private val simpleDateFormat = SimpleDateFormat("dd MMM,hh:mm a")
 
         fun bind(notes: Notes,isChecked:Boolean = false) = with(binding){
-                Log.d(TAG, "bind: $isChecked $absoluteAdapterPosition")
+//                Log.d(TAG, "bind: $isChecked $absoluteAdapterPosition")
                 notesTitle.text = notes.title
                 notesDescription.text = notes.description
-                eventDate.text=simpleDateFormat.format(notes.eventDate)
+                eventDate.text=simpleDateFormat.format(notes.createdDate)
                 itemChecked.visibility = if(isChecked) View.VISIBLE else View.GONE
                 itemView.setOnLongClickListener {
                     clickListener.onLongItemClickListener(notes, it,absoluteAdapterPosition)
@@ -166,6 +153,14 @@ class ItemAdapter(private val clickListener: OnClickListener) :
         }
     }
 
+}
+
+class NotesKeyProvider(private val adapter: ItemAdapter): ItemKeyProvider<Long>(SCOPE_CACHED) {
+    override fun getKey(position: Int): Long? = (adapter.currentList[position] as? Notes)?.id?.toLong()
+
+    override fun getPosition(key: Long): Int {
+        return adapter.currentList.indexOfFirst { (it as? Notes)?.id?.toLong() == key }
+    }
 }
 class NotesDetailLookUp(private val recyclerView: RecyclerView):ItemDetailsLookup<Long>(){
 

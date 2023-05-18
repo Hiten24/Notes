@@ -1,20 +1,29 @@
 package com.example.notes.ui.fragment
 
-import android.annotation.SuppressLint
 import android.app.Dialog
 import android.app.TimePickerDialog
 import android.content.DialogInterface
 import android.os.Bundle
+import android.text.format.DateFormat
+import android.util.Log
 import android.widget.TimePicker
 import androidx.fragment.app.DialogFragment
-import android.text.format.DateFormat
-import com.example.notes.utils.*
 import java.util.*
+import kotlin.time.Duration.Companion.hours
 
 
-class CustomTimePickerDialog : DialogFragment(),TimePickerDialog.OnTimeSetListener {
-    private var hourOfDay : Int=8
-    private var minute : Int=0
+class CustomTimePickerDialog(private val callBack: TimeCallBack) : DialogFragment(),TimePickerDialog.OnTimeSetListener {
+    private var hourOfDay : Int = setFormat()
+    private val TAG = "CustomTimePickerDialog"
+    private fun setFormat(): Int {
+        Log.d(TAG, "setFormat: ${System.currentTimeMillis().hours}")
+        return when(System.currentTimeMillis().hours){
+            else-> 12
+        }
+
+    }
+
+    private var minute : Int = 0
     private lateinit var calendar:Calendar
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         calendar= Calendar.getInstance()
@@ -22,11 +31,12 @@ class CustomTimePickerDialog : DialogFragment(),TimePickerDialog.OnTimeSetListen
         minute=calendar.get(Calendar.MINUTE)
         return TimePickerDialog(context,this, hourOfDay,minute,DateFormat.is24HourFormat(activity))
     }
-    @SuppressLint("SimpleDateFormat")
+
     override fun onTimeSet(view: TimePicker?, hourOfDay: Int, minute: Int) {
         this.hourOfDay = hourOfDay
         this.minute= minute
 
+        callBack.timeClick(this.hourOfDay, this.minute)
     }
     fun getHour():Int{
         return hourOfDay
@@ -37,7 +47,10 @@ class CustomTimePickerDialog : DialogFragment(),TimePickerDialog.OnTimeSetListen
 
     override fun onCancel(dialog: DialogInterface) {
         super.onCancel(dialog)
-        hourOfDay= 8
+        hourOfDay= 12
         minute = 0
+    }
+    interface TimeCallBack{
+        fun timeClick(hours: Int?, minute: Int?)
     }
 }
